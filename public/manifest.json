@@ -1,0 +1,43 @@
+{
+  "name": "Kingdom Passion Academy",
+  "short_name": "KPA Academy",
+  "description": "School operations system for Kingdom Passion Academy, Douala PK17",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FAF7EF",
+  "theme_color": "#1B2B5E",
+  "lang": "fr",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Collecter un paiement",
+      "short_name": "Paiement",
+      "url": "/dashboard/secretary/payments",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Arrivée / Départ",
+      "short_name": "Arrivée",
+      "url": "/dashboard/secretary/arrivals",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Marquer la présence",
+      "short_name": "Présence",
+      "url": "/dashboard/teacher/attendance",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Cahier de notes",
+      "short_name": "Notes",
+      "url": "/dashboard/teacher/gradebook",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

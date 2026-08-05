@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --kpa-navy: #1b2b5e;
+  --kpa-gold: #c9a84c;
+  --kpa-cream: #faf7ef;
+}
+
+body {
+  background-color: var(--kpa-cream);
+  color: var(--kpa-navy);
+}
+
+@media print {
+  body {
+    background: white;
+  }
+}
