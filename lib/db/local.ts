@@ -51,6 +51,7 @@ function runMigrations(db: Database.Database) {
   addColumnIfMissing("parents", "access_code", "TEXT");
   addColumnIfMissing("documents_generated", "grades_snapshot", "TEXT");
   addColumnIfMissing("staff", "pin_hash", "TEXT");
+  }
 
 export function newId() {
   return randomUUID();
