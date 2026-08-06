@@ -24,7 +24,7 @@ export default async function StudentsPage() {
             Classes) before enrolling students.
           </div>
         ) : (
-          <StudentForm classes={classes} />
+          <StudentForm classes={classes as { id: string; name: string }[]} />
         )}
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y max-h-[640px] overflow-y-auto">
