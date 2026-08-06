@@ -7,7 +7,6 @@ export default function Home() {
         src="/logo-placeholder.png"
         alt="Kingdom Passion Academy"
         className="w-20 h-20 mb-4 rounded-full bg-white/10"
-        onError={(e) => (e.currentTarget.style.display = "none")}
       />
       <h1 className="text-2xl font-bold text-kpa-gold">Kingdom Passion Academy</h1>
       <p className="text-sm text-white/70 mb-6">School Operations System — Douala PK17</p>
