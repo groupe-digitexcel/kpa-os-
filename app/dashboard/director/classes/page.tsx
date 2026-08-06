@@ -13,7 +13,7 @@ export default async function ClassesPage() {
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ClassForm teachers={teachers} />
+        <ClassForm teachers={teachers as { id: string; full_name: string }[]} />
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y">
           {classes.map((c: any) => (
