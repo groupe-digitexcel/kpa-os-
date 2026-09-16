@@ -9,6 +9,9 @@ import BilingualText, { roleLabel } from "@/components/BilingualText";
 import { getSchoolSettings } from "@/lib/actions/settings";
 
 const NAV_BY_ROLE: Record<string, { fr: string; en: string; href: string }[]> = {
+  super_admin: [
+    { fr: "Administration du personnel", en: "Staff Administration", href: "/dashboard/super-admin" },
+  ],
   director: [
     { fr: "Vue d’ensemble", en: "Overview", href: "/dashboard/director" },
     { fr: "Analyses", en: "Analytics", href: "/dashboard/director/analytics" },
@@ -49,6 +52,9 @@ const NAV_BY_ROLE: Record<string, { fr: string; en: string; href: string }[]> = 
     { fr: "Présences", en: "Attendance", href: "/dashboard/teacher/attendance" },
     { fr: "Carnet de notes", en: "Gradebook", href: "/dashboard/teacher/gradebook" },
     { fr: "Emploi du temps", en: "Timetable", href: "/dashboard/teacher/timetable" },
+  ],
+  auditor: [
+    { fr: "Journal d’audit", en: "Audit Log", href: "/dashboard/director/audit" },
   ],
 };
 
