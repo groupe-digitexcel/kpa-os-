@@ -24,24 +24,23 @@ fn main() {
                 .resource_dir()
                 .expect("could not resolve KPA-OS resource directory");
 
-            // Tauri's resource glob may preserve the files directly under the
-            // resource directory. Prefer that layout, while retaining support
-            // for a nested local-server-dist directory from older installers.
+            // Tauri can expose packaged resources in different layouts depending
+            // on the resource mapping. Support both the explicit directory
+            // mapping and legacy flattened bundles.
             let flat_server_path = resource_dir.join("server.js");
             let nested_server_path = resource_dir.join("local-server-dist").join("server.js");
-            let server_path = if flat_server_path.exists() {
-                flat_server_path
-            } else {
-                nested_server_path
-            };
 
-            if !server_path.exists() {
+            let server_path = if flat_server_path.exists() {
+                flat_server_path.clone()
+            } else if nested_server_path.exists() {
+                nested_server_path.clone()
+            } else {
                 panic!(
                     "KPA-OS local server resource is missing; checked {} and {}",
                     flat_server_path.display(),
                     nested_server_path.display()
                 );
-            }
+            };
 
             let sidecar_command = app
                 .shell()
