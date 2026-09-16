@@ -26,7 +26,7 @@ export async function listStaff() {
 
 export type CreateStaffInput = {
   fullName: string;
-  role: "director" | "accountant" | "secretary" | "teacher" | "auditor";
+  role: "super_admin" | "director" | "accountant" | "secretary" | "teacher" | "auditor";
   phone?: string;
   email: string;
   password: string;
@@ -36,6 +36,10 @@ export async function createStaffMember(input: CreateStaffInput) {
   const requester = await getEffectiveStaff();
   if (!requester || !isStaffAdmin(requester.role)) {
     return { error: "Only the Super Admin or Director can add staff." };
+  }
+
+  if (input.role === "super_admin" && requester.role !== "super_admin") {
+    return { error: "Only the Super Administrator can create another Super Administrator account." };
   }
 
   const supabase = await createClient();
@@ -76,7 +80,10 @@ export async function createStaffMember(input: CreateStaffInput) {
     .select()
     .single();
 
-  if (staffError) return { error: "Auth account created, but staff record failed: " + staffError.message };
+  if (staffError) {
+    await adminClient.auth.admin.deleteUser(authUser.user.id);
+    return { error: "Staff record failed, so the login account was rolled back: " + staffError.message };
+  }
 
   await supabase.from("audit_log").insert({
     actor_id: requester.id,
@@ -128,6 +135,9 @@ export async function updateStaffRole(
 ) {
   const requester = await getEffectiveStaff();
   if (!requester || !isStaffAdmin(requester.role)) return { error: "Only the Super Admin or Director can do this." };
+  if (role === "super_admin" && requester.role !== "super_admin") {
+    return { error: "Only the Super Administrator can assign the Super Administrator role." };
+  }
 
   if (isLocalMode()) {
     const db = getLocalDb();
