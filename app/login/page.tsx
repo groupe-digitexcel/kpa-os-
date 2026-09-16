@@ -13,10 +13,12 @@ import type { Language } from "@/lib/i18n/translations";
 const STORAGE_KEY = "kpa-os-language";
 const EVENT_NAME = "kpa-os-language-change";
 const roleLabels: Record<string, { fr: string; en: string }> = {
+  super_admin: { fr: "Super Administrateur", en: "Super Administrator" },
   director: { fr: "Directeur", en: "Director" },
   accountant: { fr: "Comptable", en: "Accountant" },
   secretary: { fr: "Secrétaire-Intendant", en: "Secretary-Bursar" },
   teacher: { fr: "Enseignant", en: "Teacher" },
+  auditor: { fr: "Auditeur", en: "Auditor" },
 };
 
 export default function LoginPage() {
