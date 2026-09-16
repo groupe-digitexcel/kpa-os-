@@ -42,3 +42,56 @@ jobs:
 
       - name: Verify repository state
         run: git diff --exit-code
+
+  windows-desktop:
+    name: Windows Desktop Installer
+    runs-on: windows-latest
+    timeout-minutes: 30
+    needs: quality
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Static production certification
+        run: npm run certify
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Package local server and Node sidecar
+        run: npm run package:local-server
+
+      - name: Build Windows Tauri installers
+        run: npm run desktop:build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Upload Windows installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: kpa-os-windows-installers
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
+          retention-days: 14
