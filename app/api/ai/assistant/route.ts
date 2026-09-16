@@ -11,15 +11,19 @@ const intents = new Set<KpaAiIntent>([
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    if (!intents.has(body?.intent) || typeof body?.prompt !== "string") {
+    const contentType = request.headers.get("content-type") || "";
+    const body = contentType.includes("application/json")
+      ? await request.json()
+      : Object.fromEntries((await request.formData()).entries());
+
+    if (!intents.has(body?.intent as KpaAiIntent) || typeof body?.prompt !== "string") {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
     const result = await runKpaAssistant({
-      intent: body.intent,
+      intent: body.intent as KpaAiIntent,
       prompt: body.prompt,
-      context: body.context,
+      context: typeof body.context === "object" && body.context !== null ? body.context as Record<string, unknown> : undefined,
     });
 
     if (result.error === "Unauthorized") return NextResponse.json(result, { status: 401 });
@@ -28,6 +32,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: 200 });
   } catch {
-    return NextResponse.json({ error: "Invalid JSON or server error" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request or server error" }, { status: 400 });
   }
 }
