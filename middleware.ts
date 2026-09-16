@@ -3,13 +3,19 @@ import { NextResponse, type NextRequest } from "next/server";
 import { verifyLocalSession } from "@/lib/auth/localSession";
 
 // Maps URL prefix -> allowed roles. Super Admin can enter every operational
-// area for oversight and account administration.
+// area for oversight and account administration. Auditors have read-only
+// access to the audit log.
 const ROLE_ROUTES: Record<string, string[]> = {
   "/dashboard/super-admin": ["super_admin"],
   "/dashboard/director": ["director", "super_admin"],
   "/dashboard/accountant": ["accountant", "director", "super_admin"],
   "/dashboard/secretary": ["secretary", "director", "super_admin"],
   "/dashboard/teacher": ["teacher", "director", "super_admin"],
+};
+
+const AUDITOR_ROUTES: Record<string, string[]> = {
+  "/dashboard/auditor": ["auditor", "super_admin"],
+  "/dashboard/director/audit": ["auditor", "director", "super_admin"],
 };
 
 export async function middleware(request: NextRequest) {
@@ -52,6 +58,11 @@ export async function middleware(request: NextRequest) {
 
   if (isProtected && hasLocalPinSession && !user) {
     const role = localSession!.role;
+    const matchedAuditorPrefix = Object.keys(AUDITOR_ROUTES).find((prefix) => path.startsWith(prefix));
+    if (matchedAuditorPrefix && !AUDITOR_ROUTES[matchedAuditorPrefix].includes(role)) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
     const matchedPrefix = Object.keys(ROLE_ROUTES).find((prefix) => path.startsWith(prefix));
     if (matchedPrefix && !ROLE_ROUTES[matchedPrefix].includes(role)) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
@@ -67,6 +78,11 @@ export async function middleware(request: NextRequest) {
 
     if (!staff || !staff.active) {
       return NextResponse.redirect(new URL("/login?error=inactive", request.url));
+    }
+
+    const matchedAuditorPrefix = Object.keys(AUDITOR_ROUTES).find((prefix) => path.startsWith(prefix));
+    if (matchedAuditorPrefix && !AUDITOR_ROUTES[matchedAuditorPrefix].includes(staff.role)) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
     const matchedPrefix = Object.keys(ROLE_ROUTES).find((prefix) => path.startsWith(prefix));
