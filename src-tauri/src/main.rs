@@ -4,6 +4,7 @@
 // at the packaged standalone Next.js server. The server runs in local mode
 // and keeps its SQLite database under the OS application-data directory.
 
+use tauri::Manager;
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
