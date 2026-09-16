@@ -23,7 +23,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
 
       # Until the dependency lockfile is committed, npm ci cannot be used.
       - name: Install dependencies
@@ -57,7 +56,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
