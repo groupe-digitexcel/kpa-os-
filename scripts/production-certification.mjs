@@ -26,7 +26,7 @@ if (existsSync("package.json")) {
   const pkg = JSON.parse(readFileSync("package.json", "utf8"));
   if (!/^>=24 <25$/.test(pkg.engines?.node || "")) failures.push("Node engine is not pinned to 24.x");
   if (pkg.dependencies?.next !== "15.5.25") failures.push("Next.js version is not the certified 15.5.25 baseline");
-  if (pkg.dependencies?.better-sqlite3 !== "13.0.3") failures.push("better-sqlite3 version is not the certified 13.0.3 baseline");
+  if (pkg.dependencies?.["better-sqlite3"] !== "13.0.3") failures.push("better-sqlite3 version is not the certified 13.0.3 baseline");
 }
 
 if (existsSync("lib/db/local.ts")) {
