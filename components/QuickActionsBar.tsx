@@ -5,6 +5,9 @@ import BilingualText from "@/components/BilingualText";
 type Action = { fr: string; en: string; href: string; icon: string };
 
 const QUICK_ACTIONS: Record<string, Action[]> = {
+  super_admin: [
+    { fr: "Administration", en: "Administration", href: "/dashboard/super-admin", icon: "🛡️" },
+  ],
   director: [
     { fr: "Aperçu", en: "Overview", href: "/dashboard/director", icon: "🏠" },
     { fr: "Analytique", en: "Analytics", href: "/dashboard/director/analytics", icon: "📊" },
@@ -27,6 +30,9 @@ const QUICK_ACTIONS: Record<string, Action[]> = {
     { fr: "Présence", en: "Attendance", href: "/dashboard/teacher/attendance", icon: "📋" },
     { fr: "Notes", en: "Grades", href: "/dashboard/teacher/gradebook", icon: "📝" },
     { fr: "Horaire", en: "Timetable", href: "/dashboard/teacher/timetable", icon: "🗓️" },
+  ],
+  auditor: [
+    { fr: "Audit", en: "Audit", href: "/dashboard/auditor", icon: "🔎" },
   ],
 };
 
