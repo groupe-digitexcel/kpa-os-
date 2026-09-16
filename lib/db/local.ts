@@ -50,6 +50,60 @@ function runMigrations(db: Database.Database) {
   addColumnIfMissing("parents", "access_code", "TEXT");
   addColumnIfMissing("documents_generated", "grades_snapshot", "TEXT");
   addColumnIfMissing("staff", "pin_hash", "TEXT");
+
+  migrateStaffRoleConstraint(db);
+}
+
+/**
+ * SQLite does not support ALTER TABLE for CHECK constraints. Older KPA-OS
+ * desktop databases therefore need a one-time staff-table rebuild so a
+ * synced super_admin account can also authenticate and operate offline.
+ *
+ * Existing staff rows, including PIN hashes, are copied unchanged.
+ */
+function migrateStaffRoleConstraint(db: Database.Database) {
+  const row = db
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'staff'")
+    .get() as { sql: string | null } | undefined;
+
+  if (!row?.sql || row.sql.includes("'super_admin'")) return;
+
+  db.pragma("foreign_keys = OFF");
+  try {
+    const migrate = db.transaction(() => {
+      db.exec(`
+        CREATE TABLE staff_new (
+          id TEXT PRIMARY KEY,
+          auth_user_id TEXT UNIQUE,
+          full_name TEXT NOT NULL,
+          role TEXT NOT NULL CHECK (role IN ('super_admin','director','accountant','secretary','teacher','auditor')),
+          phone TEXT,
+          email TEXT,
+          active INTEGER DEFAULT 1,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          deleted INTEGER DEFAULT 0,
+          pin_hash TEXT
+        );
+
+        INSERT INTO staff_new
+          (id, auth_user_id, full_name, role, phone, email, active, created_at,
+           updated_at, synced_at, deleted, pin_hash)
+        SELECT
+          id, auth_user_id, full_name, role, phone, email, active, created_at,
+          updated_at, synced_at, deleted, pin_hash
+        FROM staff;
+
+        DROP TABLE staff;
+        ALTER TABLE staff_new RENAME TO staff;
+      `);
+    });
+
+    migrate();
+  } finally {
+    db.pragma("foreign_keys = ON");
+  }
 }
 
 export function newId() {
