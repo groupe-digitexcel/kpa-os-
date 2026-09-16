@@ -7,6 +7,7 @@
 use tauri::Manager;
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
+use uuid::Uuid;
 
 fn main() {
     tauri::Builder::default()
@@ -18,6 +19,21 @@ fn main() {
                 .expect("could not resolve app data directory");
             std::fs::create_dir_all(&app_data_dir)
                 .expect("could not create KPA-OS application data directory");
+
+            // Generate the HMAC secret once per desktop installation and keep
+            // it in the application's private data directory. This removes
+            // the need to hand-edit .env.local on every Windows machine while
+            // keeping the local PIN session signing key stable across updates.
+            let secret_path = app_data_dir.join("local-session-secret");
+            let local_session_secret = match std::fs::read_to_string(&secret_path) {
+                Ok(value) if !value.trim().is_empty() => value.trim().to_string(),
+                _ => {
+                    let value = Uuid::new_v4().to_string().replace('-', "");
+                    std::fs::write(&secret_path, &value)
+                        .expect("could not persist KPA-OS local session secret");
+                    value
+                }
+            };
 
             let resource_dir = app
                 .path()
@@ -51,6 +67,7 @@ fn main() {
                 .args(["server.js"])
                 .env("DATA_MODE", "local")
                 .env("LOCAL_DB_DIR", app_data_dir.to_string_lossy().to_string())
+                .env("LOCAL_SESSION_SECRET", local_session_secret)
                 .env("PORT", "4173")
                 .env("HOSTNAME", "127.0.0.1");
 
