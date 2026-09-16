@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import InstallPrompt from "@/components/InstallPrompt";
+import LanguageBootstrap from "@/components/LanguageBootstrap";
 import { getSchoolSettings } from "@/lib/actions/settings";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr">
       <body className="min-h-screen">
+        <LanguageBootstrap />
         <ServiceWorkerRegister />
         <InstallPrompt />
         {children}
