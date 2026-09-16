@@ -27,12 +27,14 @@ export async function getClassRosterForPromotion(classId: string) {
 export type PromotionInput = {
   studentIds: string[];
   action: "promote" | "graduate" | "drop_out";
-  destinationClassId?: string; // required if action === "promote"
-};
+  destinationClassId?: string;
+}
 
 export async function promoteStudents(input: PromotionInput) {
   const staff = await getEffectiveStaff();
-  if (!staff || staff.role !== "director") return { error: "Only the Director can promote students." };
+  if (!staff || (staff.role !== "director" && staff.role !== "super_admin")) {
+    return { error: "Only the Director or Super Administrator can promote students." };
+  }
 
   if (input.action === "promote" && !input.destinationClassId) {
     return { error: "Choose a destination class." };
