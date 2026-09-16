@@ -10,7 +10,11 @@ import { getSchoolSettings } from "@/lib/actions/settings";
 
 const NAV_BY_ROLE: Record<string, { fr: string; en: string; href: string }[]> = {
   super_admin: [
+    { fr: "Vue d’ensemble", en: "Overview", href: "/dashboard/super-admin" },
     { fr: "Administration du personnel", en: "Staff Administration", href: "/dashboard/super-admin" },
+    { fr: "Sécurité du compte", en: "Account Security", href: "/dashboard/super-admin/security" },
+    { fr: "Journal d’audit", en: "Audit Log", href: "/dashboard/auditor" },
+    { fr: "Paramètres de l’école", en: "School Settings", href: "/dashboard/director/settings" },
   ],
   director: [
     { fr: "Vue d’ensemble", en: "Overview", href: "/dashboard/director" },
