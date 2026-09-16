@@ -1,5 +1,6 @@
 import DashboardShell from "@/components/DashboardShell";
 import ExportCsvButton from "@/components/ExportCsvButton";
+import BilingualText from "@/components/BilingualText";
 import { getAuditLog } from "@/lib/actions/dashboard";
 import { exportAuditLogCsv } from "@/lib/actions/exports";
 
@@ -15,9 +16,9 @@ export default async function AuditPage() {
 
   return (
     <DashboardShell>
-      <h1 className="text-2xl font-bold text-kpa-navy mb-1">Audit Log</h1>
+      <h1 className="text-2xl font-bold text-kpa-navy mb-1"><BilingualText fr="Journal d’audit" en="Audit Log" /></h1>
       <div className="flex items-center justify-between mb-6">
-        <p className="text-sm text-gray-500">Every money-handling and sensitive action, timestamped</p>
+        <p className="text-sm text-gray-500"><BilingualText fr="Chaque opération financière et action sensible, horodatée" en="Every money-handling and sensitive action, timestamped" /></p>
         <ExportCsvButton label="Export CSV" fetchCsv={exportAuditLogCsv} filename="audit-log.csv" />
       </div>
 
@@ -25,23 +26,15 @@ export default async function AuditPage() {
         {(logs ?? []).map((l: any) => (
           <div key={l.id} className="p-3 flex items-center justify-between text-sm">
             <div>
-              <span
-                className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                  ACTION_COLORS[l.action] ?? "text-gray-600 bg-gray-100"
-                }`}
-              >
+              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${ACTION_COLORS[l.action] ?? "text-gray-600 bg-gray-100"}`}>
                 {l.action.replace(/_/g, " ")}
               </span>
               <p className="text-xs text-gray-400 mt-1">{l.staff?.full_name ?? "System"}</p>
             </div>
-            <span className="text-xs text-gray-400">
-              {new Date(l.created_at).toLocaleString()}
-            </span>
+            <span className="text-xs text-gray-400">{new Date(l.created_at).toLocaleString()}</span>
           </div>
         ))}
-        {(!logs || logs.length === 0) && (
-          <p className="p-5 text-sm text-gray-400">No activity logged yet.</p>
-        )}
+        {(!logs || logs.length === 0) && <p className="p-5 text-sm text-gray-400"><BilingualText fr="Aucune activité enregistrée pour le moment." en="No activity logged yet." /></p>}
       </div>
     </DashboardShell>
   );
