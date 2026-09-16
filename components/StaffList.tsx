@@ -6,6 +6,7 @@ import { toggleStaffActive, updateStaffRole } from "@/lib/actions/staff";
 import BilingualText from "@/components/BilingualText";
 
 const ROLES = [
+  ["super_admin", "Super Administrateur", "Super Administrator"],
   ["director", "Directeur", "Director"],
   ["accountant", "Comptable", "Accountant"],
   ["secretary", "Secrétaire / Intendant", "Secretary / Bursar"],
