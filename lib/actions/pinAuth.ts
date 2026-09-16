@@ -7,10 +7,6 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import { signLocalSession } from "@/lib/auth/localSession";
 
-// Simple salted-hash PIN storage using Node's built-in crypto (no extra
-// dependency). This is NOT meant to replace real password security — it's a
-// convenience layer for re-authenticating on a device that's already been
-// logged into once, purely so staff can start a fresh session offline.
 function hashPin(pin: string, salt: string) {
   return crypto.scryptSync(pin, salt, 32).toString("hex");
 }
@@ -19,8 +15,6 @@ function generateSalt() {
   return crypto.randomBytes(16).toString("hex");
 }
 
-// Called while online/logged in normally, to set up offline PIN login for
-// next time. Requires the person to already be authenticated.
 export async function setLocalPin(pin: string) {
   if (!isLocalMode()) return { error: "PIN login only applies to the desktop app." };
   if (!/^\d{4,6}$/.test(pin)) return { error: "PIN must be 4-6 digits." };
@@ -48,8 +42,6 @@ export async function hasLocalPin() {
   return !!row?.pin_hash;
 }
 
-// Lists staff who have a PIN set up on this machine, for the offline login
-// picker (no email typing needed while offline).
 export async function listPinEnabledStaff() {
   if (!isLocalMode()) return [];
   const db = getLocalDb();
@@ -73,15 +65,16 @@ export async function pinLogin(staffId: string, pin: string) {
 
   db.prepare(`UPDATE sync_meta SET value = ? WHERE key = 'current_staff_id'`).run(staff.id);
 
-  // A lightweight marker cookie so middleware can recognize an active local
-  // session without needing to touch the database itself (middleware may run
-  // in a runtime that can't load the native SQLite binding).
+  // The packaged Windows app serves the local Next.js server over HTTP on
+  // localhost. A Secure cookie would be rejected by the browser in that
+  // environment, making the offline login appear to succeed but immediately
+  // redirecting back to /login. Keep Secure for HTTPS deployments only.
   const cookieStore = await cookies();
   cookieStore.set("local_pin_session", await signLocalSession(staff.id, staff.role), {
     httpOnly: true,
-    secure: true,
+    secure: process.env.DATA_MODE !== "local",
     sameSite: "lax",
-    maxAge: 60 * 60 * 12, // 12 hours — re-enter PIN daily, not "forever"
+    maxAge: 60 * 60 * 12,
     path: "/",
   });
 
