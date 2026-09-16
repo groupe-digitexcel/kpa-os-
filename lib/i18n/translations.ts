@@ -42,10 +42,12 @@ export const translations = {
       gradebook: "Carnet de notes",
     },
     role: {
+      super_admin: "Super Administrateur",
       director: "Directeur",
       accountant: "Comptable",
       secretary: "Secrétaire-Intendant",
       teacher: "Enseignant",
+      auditor: "Auditeur",
     },
   },
   en: {
@@ -87,10 +89,12 @@ export const translations = {
       gradebook: "Gradebook",
     },
     role: {
+      super_admin: "Super Administrator",
       director: "Director",
       accountant: "Accountant",
       secretary: "Secretary-Bursar",
       teacher: "Teacher",
+      auditor: "Auditor",
     },
   },
 } as const;
