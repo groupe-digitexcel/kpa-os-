@@ -60,17 +60,13 @@ export default async function DashboardShell({ children }: { children: ReactNode
 
   return (
     <div className="flex min-h-screen bg-kpa-cream">
-      {staff && (
-        <MobileNav nav={nav.map((item) => ({ label: item.en, href: item.href }))} schoolName={settings.school_name} role={staff.role} fullName={staff.full_name} />
-      )}
+      {staff && <MobileNav nav={nav} schoolName={settings.school_name} role={staff.role} fullName={staff.full_name} />}
       <aside className="w-64 bg-kpa-navy text-white p-5 hidden md:flex md:flex-col">
         <div className="mb-8">
           <p className="font-bold text-kpa-gold text-lg leading-tight">{settings.school_name}</p>
           <BilingualText fr={role.fr} en={role.en} className="text-xs text-white/60 capitalize" />
         </div>
-        <div className="flex justify-end mb-4">
-          <LanguageSwitcher />
-        </div>
+        <div className="flex justify-end mb-4"><LanguageSwitcher /></div>
         <nav className="flex flex-col gap-1 text-sm">
           {nav.map((item) => (
             <a key={item.href} href={item.href} className="px-3 py-2 rounded-lg hover:bg-white/10 transition">
