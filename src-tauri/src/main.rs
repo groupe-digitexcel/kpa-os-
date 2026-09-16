@@ -24,16 +24,13 @@ fn main() {
                 .resource_dir()
                 .expect("could not resolve KPA-OS resource directory");
 
-            // Tauri can expose packaged resources in different layouts depending
-            // on the resource mapping. Support both the explicit directory
-            // mapping and legacy flattened bundles.
             let flat_server_path = resource_dir.join("server.js");
             let nested_server_path = resource_dir.join("local-server-dist").join("server.js");
 
-            let server_path = if flat_server_path.exists() {
-                flat_server_path.clone()
+            let server_dir = if flat_server_path.exists() {
+                resource_dir.clone()
             } else if nested_server_path.exists() {
-                nested_server_path.clone()
+                resource_dir.join("local-server-dist")
             } else {
                 panic!(
                     "KPA-OS local server resource is missing; checked {} and {}",
@@ -42,11 +39,16 @@ fn main() {
                 );
             };
 
+            // Do not pass an absolute Windows path as a positional Node entrypoint.
+            // Node 24 can interpret a drive-qualified argument incorrectly when
+            // it is transported through the Tauri shell sidecar. Set the working
+            // directory to the packaged server directory and use a relative entrypoint.
             let sidecar_command = app
                 .shell()
                 .sidecar("kpa-local-server")
                 .expect("failed to create KPA-OS local server sidecar")
-                .args([server_path.to_string_lossy().as_ref()])
+                .current_dir(server_dir.to_string_lossy().to_string())
+                .args(["server.js"])
                 .env("DATA_MODE", "local")
                 .env("LOCAL_DB_DIR", app_data_dir.to_string_lossy().to_string())
                 .env("PORT", "4173")
