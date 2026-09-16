@@ -1,10 +1,17 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getLocalDb, newId, nowIso, writeWithSync } from "@/lib/db/local";
+import { getLocalDb, nowIso, writeWithSync } from "@/lib/db/local";
 import { getEffectiveStaff } from "@/lib/data/currentStaff";
 import { isLocalMode } from "@/lib/data/mode";
 import { revalidatePath } from "next/cache";
+
+const STAFF_ADMINS = ["super_admin", "director"] as const;
+type StaffAdminRole = (typeof STAFF_ADMINS)[number];
+
+function isStaffAdmin(role: string): role is StaffAdminRole {
+  return STAFF_ADMINS.includes(role as StaffAdminRole);
+}
 
 export async function listStaff() {
   if (isLocalMode()) {
@@ -25,22 +32,18 @@ export type CreateStaffInput = {
   password: string;
 };
 
-// Creates both the Supabase Auth account AND the staff record. Requires
-// internet even in local mode (creating an Auth user always needs the cloud)
-// — this is a one-time setup action per staff member, not a daily operation.
 export async function createStaffMember(input: CreateStaffInput) {
   const requester = await getEffectiveStaff();
-  if (!requester || requester.role !== "director") return { error: "Only the Director can add staff." };
+  if (!requester || !isStaffAdmin(requester.role)) {
+    return { error: "Only the Super Admin or Director can add staff." };
+  }
 
   const supabase = await createClient();
 
-  // Requires the service role key server-side to create an Auth user directly
-  // (admin API). Falls back to a clear error if not configured, rather than
-  // silently failing.
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return {
       error:
-        "Staff account creation needs SUPABASE_SERVICE_ROLE_KEY set in your environment. Add it in Vercel/​.env.local, then try again.",
+        "Staff account creation needs SUPABASE_SERVICE_ROLE_KEY set in your environment. Add it in Vercel/.env.local, then try again.",
     };
   }
 
@@ -84,12 +87,13 @@ export async function createStaffMember(input: CreateStaffInput) {
   });
 
   revalidatePath("/dashboard/director/staff");
+  revalidatePath("/dashboard/super-admin");
   return { data: staffRow };
 }
 
 export async function toggleStaffActive(staffId: string, active: boolean) {
   const requester = await getEffectiveStaff();
-  if (!requester || requester.role !== "director") return { error: "Only the Director can do this." };
+  if (!requester || !isStaffAdmin(requester.role)) return { error: "Only the Super Admin or Director can do this." };
 
   if (isLocalMode()) {
     const db = getLocalDb();
@@ -98,6 +102,7 @@ export async function toggleStaffActive(staffId: string, active: boolean) {
       db.prepare(`UPDATE staff SET active = ?, updated_at = ? WHERE id = ?`).run(active ? 1 : 0, now, staffId);
     });
     revalidatePath("/dashboard/director/staff");
+    revalidatePath("/dashboard/super-admin");
     return { success: true };
   }
 
@@ -113,12 +118,16 @@ export async function toggleStaffActive(staffId: string, active: boolean) {
   });
 
   revalidatePath("/dashboard/director/staff");
+  revalidatePath("/dashboard/super-admin");
   return { success: true };
 }
 
-export async function updateStaffRole(staffId: string, role: CreateStaffInput["role"]) {
+export async function updateStaffRole(
+  staffId: string,
+  role: CreateStaffInput["role"]
+) {
   const requester = await getEffectiveStaff();
-  if (!requester || requester.role !== "director") return { error: "Only the Director can do this." };
+  if (!requester || !isStaffAdmin(requester.role)) return { error: "Only the Super Admin or Director can do this." };
 
   if (isLocalMode()) {
     const db = getLocalDb();
@@ -127,12 +136,23 @@ export async function updateStaffRole(staffId: string, role: CreateStaffInput["r
       db.prepare(`UPDATE staff SET role = ?, updated_at = ? WHERE id = ?`).run(role, now, staffId);
     });
     revalidatePath("/dashboard/director/staff");
+    revalidatePath("/dashboard/super-admin");
     return { success: true };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.from("staff").update({ role }).eq("id", staffId);
   if (error) return { error: "Could not update role." };
+
+  await supabase.from("audit_log").insert({
+    actor_id: requester.id,
+    action: "staff_role_changed",
+    entity: "staff",
+    entity_id: staffId,
+    details: { role },
+  });
+
   revalidatePath("/dashboard/director/staff");
+  revalidatePath("/dashboard/super-admin");
   return { success: true };
 }
