@@ -32,9 +32,7 @@ export default function Gradebook({ classId, subjects, assessments }: { classId:
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between mb-4">
           <label className="text-sm font-medium text-kpa-navy"><BilingualText fr="Évaluation" en="Assessment" /></label>
-          <button type="button" onClick={() => setShowNewForm(!showNewForm)} className="text-xs text-kpa-navy font-semibold hover:underline">
-            {showNewForm ? <BilingualText fr="Annuler" en="Cancel" /> : <BilingualText fr="+ Nouvelle évaluation" en="+ New Assessment" />}
-          </button>
+          <button type="button" onClick={() => setShowNewForm(!showNewForm)} className="text-xs text-kpa-navy font-semibold hover:underline">{showNewForm ? <BilingualText fr="Annuler" en="Cancel" /> : <BilingualText fr="+ Nouvelle évaluation" en="+ New Assessment" />}</button>
         </div>
         {showNewForm ? (
           <form onSubmit={handleCreateAssessment} className="space-y-3">
@@ -50,18 +48,14 @@ export default function Gradebook({ classId, subjects, assessments }: { classId:
             <button type="submit" disabled={isPending} className="w-full bg-kpa-navy text-white text-sm font-semibold py-2 rounded-lg hover:bg-kpa-navy/90 disabled:opacity-50"><BilingualText fr="Créer" en="Create" /></button>
           </form>
         ) : (
-          <select value={selectedAssessment} onChange={(e) => setSelectedAssessment(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-kpa-gold">
-            {assessments.map((a) => <option key={a.id} value={a.id}>{a.subject?.name} — {a.title} ({a.term})</option>)}
-          </select>
+          <select value={selectedAssessment} onChange={(e) => setSelectedAssessment(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-kpa-gold">{assessments.map((a) => <option key={a.id} value={a.id}>{a.subject?.name} — {a.title} ({a.term})</option>)}</select>
         )}
       </div>
 
       {selectedAssessment && !showNewForm && <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-kpa-navy text-sm"><BilingualText fr="Saisir les notes (sur" en="Enter Scores (out of" /> {currentMaxScore})</h2>
-          <button onClick={handleSaveGrades} disabled={isPending} className="bg-kpa-navy text-white text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-kpa-navy/90 disabled:opacity-50">
-            {isPending ? <BilingualText fr="Enregistrement..." en="Saving..." /> : saved ? "Saved ✓ / Enregistré ✓" : <BilingualText fr="Enregistrer les notes" en="Save Scores" />}
-          </button>
+          <h2 className="font-semibold text-kpa-navy text-sm"><BilingualText fr={`Saisir les notes (sur ${currentMaxScore})`} en={`Enter Scores (out of ${currentMaxScore})`} /></h2>
+          <button onClick={handleSaveGrades} disabled={isPending} className="bg-kpa-navy text-white text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-kpa-navy/90 disabled:opacity-50">{isPending ? <BilingualText fr="Enregistrement..." en="Saving..." /> : saved ? "Saved ✓ / Enregistré ✓" : <BilingualText fr="Enregistrer les notes" en="Save Scores" />}</button>
         </div>
         <div className="divide-y">
           {roster.map((s) => <div key={s.id} className="flex items-center justify-between px-4 py-3 text-sm"><span className="text-kpa-navy font-medium">{s.full_name}</span><input type="number" min="0" max={currentMaxScore} value={s.score ?? ""} onChange={(e) => updateScore(s.id, e.target.value)} className="w-20 border border-gray-300 rounded-lg px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-kpa-gold" /></div>)}
