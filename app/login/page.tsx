@@ -112,7 +112,6 @@ export default function LoginPage() {
               </button>
             )}
           <form onSubmit={handleBootstrap}>
-          <form onSubmit={handleBootstrap}>
             <div className="bg-green-50 text-green-800 text-sm p-3 rounded-lg mb-4">
               <BilingualText fr="Ce PC n’est pas encore initialisé. Créez le premier Super Administrateur hors ligne. Aucun compte Internet n’est requis." en="This PC is not initialized yet. Create the first Super Administrator offline. No online account is required." />
             </div>
