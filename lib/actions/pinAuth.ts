@@ -35,6 +35,44 @@ export async function bootstrapLocalAdmin(fullName: string, pin: string) {
   return { success: true, staffId: id };
 }
 
+export async function testLocalAdminLogin() {
+  if (!isLocalMode() || process.env.KPA_TEST_MODE !== "1") {
+    return { error: "Test login is disabled." };
+  }
+
+  const db = getLocalDb();
+  let staff = db.prepare(
+    `SELECT * FROM staff WHERE role = 'super_admin' AND active = 1 AND deleted = 0 ORDER BY created_at LIMIT 1`
+  ).get() as any;
+
+  if (!staff) {
+    const id = newId();
+    const now = nowIso();
+    db.prepare(
+      `INSERT INTO staff (id, auth_user_id, full_name, role, email, active, created_at, updated_at, deleted, pin_hash)
+       VALUES (?, NULL, 'KPA-OS Test Super Administrator', 'super_admin', NULL, 1, ?, ?, 0, NULL)`
+    ).run(id, now, now);
+    db.prepare(`UPDATE sync_meta SET value = ? WHERE key = 'current_staff_id'`).run(id);
+    db.prepare(
+      `INSERT INTO audit_log (id, actor_id, action, entity, entity_id, details, created_at)
+       VALUES (?, ?, 'test_login', 'staff', ?, ?, ?)`
+    ).run(newId(), id, id, JSON.stringify({ role: "super_admin", test_mode: true }), now);
+    staff = db.prepare(`SELECT * FROM staff WHERE id = ?`).get(id);
+  } else {
+    db.prepare(`UPDATE sync_meta SET value = ? WHERE key = 'current_staff_id'`).run(staff.id);
+    db.prepare(
+      `INSERT INTO audit_log (id, actor_id, action, entity, entity_id, details, created_at)
+       VALUES (?, ?, 'test_login', 'staff', ?, ?, ?)`
+    ).run(newId(), staff.id, staff.id, JSON.stringify({ role: "super_admin", test_mode: true }), nowIso());
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set("local_pin_session", await signLocalSession(staff.id, "super_admin"), {
+    httpOnly: true, secure: false, sameSite: "lax", maxAge: 60 * 60 * 12, path: "/"
+  });
+  return { success: true, staffId: staff.id };
+}
+
 export async function setLocalPin(pin: string) {
   if (!isLocalMode()) return { error: "PIN login only applies to the desktop app." };
   if (!/^\d{4,6}$/.test(pin)) return { error: "PIN must be 4-6 digits." };
