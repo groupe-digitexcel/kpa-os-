@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cacheStaffSessionLocally } from "@/lib/actions/auth";
 import { getSchoolSettings } from "@/lib/actions/settings";
-import { bootstrapLocalAdmin, getLocalAuthState, listPinEnabledStaff, pinLogin } from "@/lib/actions/pinAuth";
+import { bootstrapLocalAdmin, getLocalAuthState, listPinEnabledStaff, pinLogin, testLocalAdminLogin } from "@/lib/actions/pinAuth";
 import BilingualText from "@/components/BilingualText";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import type { Language } from "@/lib/i18n/translations";
@@ -33,6 +33,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"password" | "pin">("pin");
   const [local, setLocal] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [testMode, setTestMode] = useState(false);
   const [pinStaff, setPinStaff] = useState<any[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [pin, setPin] = useState("");
@@ -41,7 +42,7 @@ export default function LoginPage() {
 
   async function refreshLocalState() {
     const state = await getLocalAuthState();
-    setLocal(state.local); setInitialized(state.initialized);
+    setLocal(state.local); setInitialized(state.initialized); setTestMode(state.testMode);
     const staff = await listPinEnabledStaff();
     setPinStaff(staff);
     if (staff.length > 0) setSelectedStaffId((staff[0] as any).id);
@@ -65,6 +66,13 @@ export default function LoginPage() {
     e.preventDefault(); setLoading(true); setError(null);
     if (pin !== confirmPin) { setError(language === "fr" ? "Les deux PIN ne correspondent pas." : "The PINs do not match."); setLoading(false); return; }
     const result = await bootstrapLocalAdmin(adminName, pin);
+    if (result.error) { setError(result.error); setLoading(false); return; }
+    router.push("/dashboard"); router.refresh();
+  }
+
+  async function handleTestLogin() {
+    setLoading(true); setError(null);
+    const result = await testLocalAdminLogin();
     if (result.error) { setError(result.error); setLoading(false); return; }
     router.push("/dashboard"); router.refresh();
   }
@@ -97,6 +105,13 @@ export default function LoginPage() {
         {error && <div className="bg-red-50 text-red-600 text-sm p-2 rounded mb-4">{error}</div>}
 
         {canBootstrap ? (
+          <div>
+            {testMode && (
+              <button type="button" onClick={handleTestLogin} disabled={loading} className="w-full bg-kpa-gold text-kpa-navy font-bold py-3 rounded-lg mb-4 disabled:opacity-50">
+                {loading ? "..." : <BilingualText fr="🧪 Ouvrir en mode TEST — Super Administrateur" en="🧪 Open TEST MODE — Super Administrator" />}
+              </button>
+            )}
+          <form onSubmit={handleBootstrap}>
           <form onSubmit={handleBootstrap}>
             <div className="bg-green-50 text-green-800 text-sm p-3 rounded-lg mb-4">
               <BilingualText fr="Ce PC n’est pas encore initialisé. Créez le premier Super Administrateur hors ligne. Aucun compte Internet n’est requis." en="This PC is not initialized yet. Create the first Super Administrator offline. No online account is required." />
