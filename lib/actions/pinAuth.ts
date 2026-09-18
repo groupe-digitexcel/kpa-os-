@@ -11,11 +11,11 @@ function hashPin(pin: string, salt: string) { return crypto.scryptSync(pin, salt
 function generateSalt() { return crypto.randomBytes(16).toString("hex"); }
 function makePinHash(pin: string) { const salt = generateSalt(); return `${salt}:${hashPin(pin, salt)}`; }
 
-export async function getLocalAuthState() {
-  if (!isLocalMode()) return { local: false, initialized: false };
+export async function getLocalAuthState(): Promise<{ local: boolean; initialized: boolean; testMode: boolean }> {
+  if (!isLocalMode()) return { local: false, initialized: false, testMode: false };
   const db = getLocalDb();
   const row = db.prepare(`SELECT COUNT(*) as count FROM staff WHERE deleted = 0`).get() as { count: number };
-  return { local: true, initialized: row.count > 0 };
+  return { local: true, initialized: row.count > 0, testMode: process.env.KPA_TEST_MODE === "1" };
 }
 
 export async function bootstrapLocalAdmin(fullName: string, pin: string) {
@@ -36,40 +36,21 @@ export async function bootstrapLocalAdmin(fullName: string, pin: string) {
 }
 
 export async function testLocalAdminLogin() {
-  if (!isLocalMode() || process.env.KPA_TEST_MODE !== "1") {
-    return { error: "Test login is disabled." };
-  }
-
+  if (!isLocalMode() || process.env.KPA_TEST_MODE !== "1") return { error: "Test login is disabled." };
   const db = getLocalDb();
-  let staff = db.prepare(
-    `SELECT * FROM staff WHERE role = 'super_admin' AND active = 1 AND deleted = 0 ORDER BY created_at LIMIT 1`
-  ).get() as any;
-
+  let staff = db.prepare(`SELECT * FROM staff WHERE role = 'super_admin' AND active = 1 AND deleted = 0 ORDER BY created_at LIMIT 1`).get() as any;
   if (!staff) {
-    const id = newId();
-    const now = nowIso();
-    db.prepare(
-      `INSERT INTO staff (id, auth_user_id, full_name, role, email, active, created_at, updated_at, deleted, pin_hash)
-       VALUES (?, NULL, 'KPA-OS Test Super Administrator', 'super_admin', NULL, 1, ?, ?, 0, NULL)`
-    ).run(id, now, now);
+    const id = newId(); const now = nowIso();
+    db.prepare(`INSERT INTO staff (id, auth_user_id, full_name, role, email, active, created_at, updated_at, deleted, pin_hash) VALUES (?, NULL, 'KPA-OS Test Super Administrator', 'super_admin', NULL, 1, ?, ?, 0, NULL)`).run(id, now, now);
     db.prepare(`UPDATE sync_meta SET value = ? WHERE key = 'current_staff_id'`).run(id);
-    db.prepare(
-      `INSERT INTO audit_log (id, actor_id, action, entity, entity_id, details, created_at)
-       VALUES (?, ?, 'test_login', 'staff', ?, ?, ?)`
-    ).run(newId(), id, id, JSON.stringify({ role: "super_admin", test_mode: true }), now);
+    db.prepare(`INSERT INTO audit_log (id, actor_id, action, entity, entity_id, details, created_at) VALUES (?, ?, 'test_login', 'staff', ?, ?, ?)`).run(newId(), id, id, JSON.stringify({ role: "super_admin", test_mode: true }), now);
     staff = db.prepare(`SELECT * FROM staff WHERE id = ?`).get(id);
   } else {
     db.prepare(`UPDATE sync_meta SET value = ? WHERE key = 'current_staff_id'`).run(staff.id);
-    db.prepare(
-      `INSERT INTO audit_log (id, actor_id, action, entity, entity_id, details, created_at)
-       VALUES (?, ?, 'test_login', 'staff', ?, ?, ?)`
-    ).run(newId(), staff.id, staff.id, JSON.stringify({ role: "super_admin", test_mode: true }), nowIso());
+    db.prepare(`INSERT INTO audit_log (id, actor_id, action, entity, entity_id, details, created_at) VALUES (?, ?, 'test_login', 'staff', ?, ?, ?)`).run(newId(), staff.id, staff.id, JSON.stringify({ role: "super_admin", test_mode: true }), nowIso());
   }
-
   const cookieStore = await cookies();
-  cookieStore.set("local_pin_session", await signLocalSession(staff.id, "super_admin"), {
-    httpOnly: true, secure: false, sameSite: "lax", maxAge: 60 * 60 * 12, path: "/"
-  });
+  cookieStore.set("local_pin_session", await signLocalSession(staff.id, "super_admin"), { httpOnly: true, secure: false, sameSite: "lax", maxAge: 60 * 60 * 12, path: "/" });
   return { success: true, staffId: staff.id };
 }
 
@@ -78,8 +59,7 @@ export async function setLocalPin(pin: string) {
   if (!/^\d{4,6}$/.test(pin)) return { error: "PIN must be 4-6 digits." };
   const staff = await getEffectiveStaff();
   if (!staff) return { error: "Not authenticated" };
-  const db = getLocalDb();
-  db.prepare(`UPDATE staff SET pin_hash = ? WHERE id = ?`).run(makePinHash(pin), staff.id);
+  getLocalDb().prepare(`UPDATE staff SET pin_hash = ? WHERE id = ?`).run(makePinHash(pin), staff.id);
   return { success: true };
 }
 
@@ -87,15 +67,13 @@ export async function hasLocalPin() {
   if (!isLocalMode()) return false;
   const staff = await getEffectiveStaff();
   if (!staff) return false;
-  const db = getLocalDb();
-  const row = db.prepare(`SELECT pin_hash FROM staff WHERE id = ?`).get(staff.id) as { pin_hash: string | null } | undefined;
+  const row = getLocalDb().prepare(`SELECT pin_hash FROM staff WHERE id = ?`).get(staff.id) as { pin_hash: string | null } | undefined;
   return !!row?.pin_hash;
 }
 
 export async function listPinEnabledStaff() {
   if (!isLocalMode()) return [];
-  const db = getLocalDb();
-  return db.prepare(`SELECT id, full_name, role FROM staff WHERE pin_hash IS NOT NULL AND active = 1 AND deleted = 0 ORDER BY full_name`).all();
+  return getLocalDb().prepare(`SELECT id, full_name, role FROM staff WHERE pin_hash IS NOT NULL AND active = 1 AND deleted = 0 ORDER BY full_name`).all();
 }
 
 export async function pinLogin(staffId: string, pin: string) {
