@@ -2,12 +2,20 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { verifyLocalSession } from "@/lib/auth/localSession";
 
-// Maps URL prefix -> allowed roles
+// Maps URL prefix -> allowed roles. Super Admin can enter every operational
+// area for oversight and account administration. Auditors have read-only
+// access to the audit log.
 const ROLE_ROUTES: Record<string, string[]> = {
-  "/dashboard/director": ["director"],
-  "/dashboard/accountant": ["accountant", "director"],
-  "/dashboard/secretary": ["secretary", "director"],
-  "/dashboard/teacher": ["teacher", "director"],
+  "/dashboard/super-admin": ["super_admin"],
+  "/dashboard/director": ["director", "super_admin"],
+  "/dashboard/accountant": ["accountant", "director", "super_admin"],
+  "/dashboard/secretary": ["secretary", "director", "super_admin"],
+  "/dashboard/teacher": ["teacher", "director", "super_admin"],
+};
+
+const AUDITOR_ROUTES: Record<string, string[]> = {
+  "/dashboard/auditor": ["auditor", "super_admin"],
+  "/dashboard/director/audit": ["auditor", "director", "super_admin"],
 };
 
 export async function middleware(request: NextRequest) {
@@ -39,11 +47,6 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isProtected = path.startsWith("/dashboard");
 
-  // Local desktop mode: a valid, SIGNED PIN session cookie is an acceptable
-  // substitute for a live Supabase Auth session, so staff can start a fresh
-  // session fully offline. The signature (HMAC) prevents a user from simply
-  // editing the cookie in devtools to claim a different role. Role-specific
-  // checks still also happen at the page/action level as defense in depth.
   const localSessionCookie =
     process.env.DATA_MODE === "local" ? request.cookies.get("local_pin_session")?.value : undefined;
   const localSession = localSessionCookie ? await verifyLocalSession(localSessionCookie) : null;
@@ -55,6 +58,11 @@ export async function middleware(request: NextRequest) {
 
   if (isProtected && hasLocalPinSession && !user) {
     const role = localSession!.role;
+    const matchedAuditorPrefix = Object.keys(AUDITOR_ROUTES).find((prefix) => path.startsWith(prefix));
+    if (matchedAuditorPrefix && !AUDITOR_ROUTES[matchedAuditorPrefix].includes(role)) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
     const matchedPrefix = Object.keys(ROLE_ROUTES).find((prefix) => path.startsWith(prefix));
     if (matchedPrefix && !ROLE_ROUTES[matchedPrefix].includes(role)) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
@@ -70,6 +78,11 @@ export async function middleware(request: NextRequest) {
 
     if (!staff || !staff.active) {
       return NextResponse.redirect(new URL("/login?error=inactive", request.url));
+    }
+
+    const matchedAuditorPrefix = Object.keys(AUDITOR_ROUTES).find((prefix) => path.startsWith(prefix));
+    if (matchedAuditorPrefix && !AUDITOR_ROUTES[matchedAuditorPrefix].includes(staff.role)) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
     const matchedPrefix = Object.keys(ROLE_ROUTES).find((prefix) => path.startsWith(prefix));

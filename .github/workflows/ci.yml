@@ -1,0 +1,101 @@
+name: KPA-OS CI
+
+on:
+  push:
+    branches: [main, kpa-os-v2-foundation]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: kpa-os-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # Until the dependency lockfile is committed, npm ci cannot be used.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Static production certification
+        run: npm run certify
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-build-placeholder
+
+      - name: Verify repository state
+        run: git diff --exit-code
+
+  windows-desktop:
+    name: Windows Desktop Installer
+    runs-on: windows-latest
+    timeout-minutes: 30
+    needs: quality
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Static production certification
+        run: npm run certify
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-build-placeholder
+
+      - name: Package local server and Node sidecar
+        run: npm run package:local-server
+
+      - name: Build Windows Tauri installers
+        run: npm run desktop:build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-build-placeholder
+
+      - name: Upload Windows installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: kpa-os-windows-installers
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
+          retention-days: 14

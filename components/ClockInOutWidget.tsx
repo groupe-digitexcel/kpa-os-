@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { clockIn, clockOut } from "@/lib/actions/staffAttendance";
+import BilingualText from "@/components/BilingualText";
 
 export default function ClockInOutWidget({
   clockInTime,
@@ -36,36 +37,28 @@ export default function ClockInOutWidget({
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
       <div>
-        <p className="text-xs text-gray-500 uppercase">Your Attendance Today</p>
+        <p className="text-xs text-gray-500 uppercase"><BilingualText fr="Votre présence aujourd’hui" en="Your Attendance Today" /></p>
         {clockInTime ? (
           <p className="text-sm text-kpa-navy mt-1">
-            In: {new Date(clockInTime).toLocaleTimeString()}
-            {clockOutTime && ` · Out: ${new Date(clockOutTime).toLocaleTimeString()}`}
+            <BilingualText fr="Entrée" en="In" />: {new Date(clockInTime).toLocaleTimeString()}
+            {clockOutTime && <> · <BilingualText fr="Sortie" en="Out" />: {new Date(clockOutTime).toLocaleTimeString()}</>}
           </p>
         ) : (
-          <p className="text-sm text-gray-400 mt-1">Not clocked in yet</p>
+          <p className="text-sm text-gray-400 mt-1"><BilingualText fr="Pas encore pointé" en="Not clocked in yet" /></p>
         )}
         {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
       </div>
 
       {!clockInTime ? (
-        <button
-          onClick={handleClockIn}
-          disabled={isPending}
-          className="bg-kpa-navy text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-kpa-navy/90 disabled:opacity-50"
-        >
-          Clock In
+        <button onClick={handleClockIn} disabled={isPending} className="bg-kpa-navy text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-kpa-navy/90 disabled:opacity-50">
+          <BilingualText fr="Pointer l’entrée" en="Clock In" />
         </button>
       ) : !clockOutTime ? (
-        <button
-          onClick={handleClockOut}
-          disabled={isPending}
-          className="bg-kpa-gold text-kpa-navy text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
-        >
-          Clock Out
+        <button onClick={handleClockOut} disabled={isPending} className="bg-kpa-gold text-kpa-navy text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50">
+          <BilingualText fr="Pointer la sortie" en="Clock Out" />
         </button>
       ) : (
-        <span className="text-xs text-green-600 font-semibold">Day complete ✓</span>
+        <span className="text-xs text-green-600 font-semibold"><BilingualText fr="Journée terminée ✓" en="Day complete ✓" /></span>
       )}
     </div>
   );

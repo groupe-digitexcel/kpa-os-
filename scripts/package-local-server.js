@@ -1,19 +1,11 @@
 #!/usr/bin/env node
 /**
- * Packages the standalone Next.js server + a bundled Node runtime into
- * src-tauri/binaries/, named the way Tauri's sidecar convention requires
- * (a target-triple suffix, e.g. kpa-local-server-x86_64-pc-windows-msvc.exe).
+ * Prepare the standalone Next.js server and the Node runtime for Tauri.
  *
- * WHY A BUNDLED NODE RUNTIME INSTEAD OF A SINGLE COMPILED .exe (pkg/nexe):
- * better-sqlite3 is a native addon (compiled C++ per platform/Node version).
- * Single-executable compilers often fight with native addons. Shipping the
- * standalone Next.js output next to a real Node.exe is more moving parts on
- * disk, but far more reliable — this is the same technique many production
- * Electron/Tauri apps use for a Node backend.
- *
- * Run this AFTER `npm run build` (which produces .next/standalone).
- *
- * Usage: node scripts/package-local-server.js
+ * On Windows CI, the Node executable used to run this script is copied as
+ * Tauri's sidecar executable. This avoids a second native-executable toolchain
+ * and keeps better-sqlite3 compatible with the same Node major version used
+ * during the production build.
  */
 
 const fs = require("fs");
@@ -30,7 +22,7 @@ function log(msg) {
 
 if (!fs.existsSync(STANDALONE_DIR)) {
   console.error(
-    "No .next/standalone found. Run `npm run build` first (next.config.js already has output: 'standalone')."
+    "No .next/standalone found. Run `npm run build` first (next.config.js uses output: 'standalone')."
   );
   process.exit(1);
 }
@@ -41,29 +33,39 @@ fs.mkdirSync(SIDECAR_DIR, { recursive: true });
 log("Copying standalone server output...");
 fs.cpSync(STANDALONE_DIR, OUTPUT_DIR, { recursive: true });
 
-// Copy static assets + public folder (standalone output doesn't include these)
-fs.cpSync(path.join(ROOT, ".next", "static"), path.join(OUTPUT_DIR, ".next", "static"), {
-  recursive: true,
-});
-if (fs.existsSync(path.join(ROOT, "public"))) {
-  fs.cpSync(path.join(ROOT, "public"), path.join(OUTPUT_DIR, "public"), { recursive: true });
+const staticSource = path.join(ROOT, ".next", "static");
+if (fs.existsSync(staticSource)) {
+  fs.cpSync(staticSource, path.join(OUTPUT_DIR, ".next", "static"), {
+    recursive: true,
+  });
 }
-// The local SQLite schema file is read at runtime by lib/db/local.ts
-fs.cpSync(
-  path.join(ROOT, "lib", "db", "local-schema.sql"),
-  path.join(OUTPUT_DIR, "lib", "db", "local-schema.sql")
-);
 
-log(`Done. Standalone server is at: ${OUTPUT_DIR}`);
-log("");
-log("NEXT STEP (manual, one-time per machine you build on):");
-log("  1. Download a Windows Node.js binary (node.exe) matching your Node major version");
-log(`     from https://nodejs.org/dist/ and place it at: ${SIDECAR_DIR}/node.exe`);
-log("  2. Create a small launcher batch/exe that runs:");
-log(`       node.exe "${OUTPUT_DIR}\\server.js"`);
-log("     (Tauri's externalBin expects ONE executable — package node.exe + server.js");
-log("      + a launcher into a self-extracting or portable wrapper, OR use a tool like");
-log("      'nexe'/'caxa' to fuse node.exe + this folder into a single .exe sidecar.)");
-log("  3. Name the final sidecar exactly:");
-log("       src-tauri/binaries/kpa-local-server-x86_64-pc-windows-msvc.exe");
-log("     (Tauri requires this target-triple suffix for sidecar binaries.)");
+const publicSource = path.join(ROOT, "public");
+if (fs.existsSync(publicSource)) {
+  fs.cpSync(publicSource, path.join(OUTPUT_DIR, "public"), { recursive: true });
+}
+
+const schemaSource = path.join(ROOT, "lib", "db", "local-schema.sql");
+if (fs.existsSync(schemaSource)) {
+  fs.mkdirSync(path.join(OUTPUT_DIR, "lib", "db"), { recursive: true });
+  fs.cpSync(schemaSource, path.join(OUTPUT_DIR, "lib", "db", "local-schema.sql"));
+}
+
+// Tauri's externalBin requires an executable with the target-triple suffix.
+// On Windows, the Node runtime executing this script is the correct native
+// runtime for the build and can directly launch server.js as its argument.
+if (process.platform === "win32" && process.arch === "x64") {
+  const target = "x86_64-pc-windows-msvc";
+  const sidecarPath = path.join(
+    SIDECAR_DIR,
+    `kpa-local-server-${target}.exe`
+  );
+  fs.copyFileSync(process.execPath, sidecarPath);
+  log(`Bundled Node runtime: ${sidecarPath}`);
+} else if (process.platform === "win32") {
+  console.error(`Unsupported Windows architecture: ${process.arch}. KPA-OS currently builds the x64 installer.`);
+  process.exit(1);
+}
+
+log(`Standalone server is ready at: ${OUTPUT_DIR}`);
+log("Tauri can now package the Windows desktop application without a manual sidecar launcher.");

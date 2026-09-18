@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { approveReconciliation } from "@/lib/actions/reconciliation";
+import BilingualText from "@/components/BilingualText";
 
 export default function ReconciliationApproval({ reconciliationId }: { reconciliationId: string }) {
   const router = useRouter();
@@ -17,19 +18,11 @@ export default function ReconciliationApproval({ reconciliationId }: { reconcili
 
   return (
     <div className="flex gap-2">
-      <button
-        disabled={isPending}
-        onClick={() => handle(true)}
-        className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50"
-      >
-        Approve
+      <button disabled={isPending} onClick={() => handle(true)} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50">
+        <BilingualText fr="Approuver" en="Approve" />
       </button>
-      <button
-        disabled={isPending}
-        onClick={() => handle(false)}
-        className="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 disabled:opacity-50"
-      >
-        Flag
+      <button disabled={isPending} onClick={() => handle(false)} className="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 disabled:opacity-50">
+        <BilingualText fr="Signaler" en="Flag" />
       </button>
     </div>
   );
