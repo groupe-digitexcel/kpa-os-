@@ -69,7 +69,9 @@ fn main() {
                 .env("LOCAL_DB_DIR", app_data_dir.to_string_lossy().to_string())
                 .env("LOCAL_SESSION_SECRET", local_session_secret)
                 .env("PORT", "4173")
-                .env("HOSTNAME", "127.0.0.1");
+                .env("HOSTNAME", "127.0.0.1")
+                // Explicitly enabled only in the packaged local desktop build so the tester can enter without a password/PIN.
+                .env("KPA_TEST_MODE", "1");
 
             let (mut rx, _child) = sidecar_command
                 .spawn()
