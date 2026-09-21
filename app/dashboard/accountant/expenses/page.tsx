@@ -1,6 +1,7 @@
 import DashboardShell from "@/components/DashboardShell";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExportCsvButton from "@/components/ExportCsvButton";
+import BilingualText from "@/components/BilingualText";
 import { getRecentExpenses, getMonthlyFinancialSummary } from "@/lib/actions/expenses";
 
 export default async function ExpensesPage() {
@@ -23,23 +24,23 @@ export default async function ExpensesPage() {
 
   return (
     <DashboardShell>
-      <h1 className="text-2xl font-bold text-kpa-navy mb-1">Expenses</h1>
+      <h1 className="text-2xl font-bold text-kpa-navy mb-1"><BilingualText fr="Dépenses" en="Expenses" /></h1>
       <div className="flex items-center justify-between mb-6">
-        <p className="text-sm text-gray-500">This month's financial picture</p>
+        <p className="text-sm text-gray-500"><BilingualText fr="Situation financière du mois" en="This month's financial picture" /></p>
         <ExportCsvButton label="Export CSV" fetchCsv={exportExpensesCsv} filename="expenses.csv" />
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <p className="text-xs text-gray-500 uppercase">Income (Fees)</p>
+          <p className="text-xs text-gray-500 uppercase"><BilingualText fr="Revenus (frais)" en="Income (Fees)" /></p>
           <p className="text-xl font-bold text-green-600 mt-1">{summary.income.toLocaleString()}</p>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <p className="text-xs text-gray-500 uppercase">Expenses</p>
+          <p className="text-xs text-gray-500 uppercase"><BilingualText fr="Dépenses" en="Expenses" /></p>
           <p className="text-xl font-bold text-red-600 mt-1">{summary.expenses.toLocaleString()}</p>
         </div>
         <div className="bg-kpa-navy rounded-xl p-4">
-          <p className="text-xs text-white/60 uppercase">Net</p>
+          <p className="text-xs text-white/60 uppercase"><BilingualText fr="Net" en="Net" /></p>
           <p className={`text-xl font-bold mt-1 ${net >= 0 ? "text-kpa-gold" : "text-red-400"}`}>{net.toLocaleString()}</p>
         </div>
       </div>
@@ -58,7 +59,7 @@ export default async function ExpensesPage() {
               <p className="text-xs text-gray-400">{e.expense_date} · {e.staff?.full_name}</p>
             </div>
           ))}
-          {expenses.length === 0 && <p className="p-5 text-sm text-gray-400">No expenses recorded yet.</p>}
+          {expenses.length === 0 && <p className="p-5 text-sm text-gray-400"><BilingualText fr="Aucune dépense enregistrée pour le moment." en="No expenses recorded yet." /></p>}
         </div>
       </div>
     </DashboardShell>

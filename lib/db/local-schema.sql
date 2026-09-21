@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS staff (
   id TEXT PRIMARY KEY,
   auth_user_id TEXT UNIQUE,
   full_name TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('director','accountant','secretary','teacher','auditor')),
+  role TEXT NOT NULL CHECK (role IN ('super_admin','director','accountant','secretary','teacher','auditor')),
   phone TEXT,
   email TEXT,
   active INTEGER DEFAULT 1,
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS attendance_checks (
   register_count INTEGER NOT NULL,
   physical_count INTEGER NOT NULL,
   discrepancy INTEGER NOT NULL,
-  new_students_found TEXT, -- JSON string
+  new_students_found TEXT,
   notes TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now')),
@@ -213,7 +213,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
   action TEXT NOT NULL,
   entity TEXT,
   entity_id TEXT,
-  details TEXT, -- JSON string
+  details TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   synced_at TEXT
 );
@@ -374,7 +374,7 @@ CREATE TABLE IF NOT EXISTS health_records (
   emergency_contact_name TEXT,
   emergency_contact_phone TEXT,
   blood_type TEXT,
-  immunizations TEXT, -- JSON string
+  immunizations TEXT,
   notes TEXT,
   updated_by TEXT REFERENCES staff(id),
   created_at TEXT DEFAULT (datetime('now')),
@@ -419,14 +419,12 @@ CREATE TABLE IF NOT EXISTS staff_attendance (
 -- runMigrations() function in lib/db/local.ts, which adds them defensively.
 
 -- ---------- SYNC BOOKKEEPING ----------
--- Tracks pending local changes that haven't reached Supabase yet, and any
--- conflicts the sync engine couldn't auto-resolve.
 CREATE TABLE IF NOT EXISTS sync_queue (
   id TEXT PRIMARY KEY,
   table_name TEXT NOT NULL,
   record_id TEXT NOT NULL,
   operation TEXT NOT NULL CHECK (operation IN ('insert','update','delete')),
-  payload TEXT NOT NULL, -- JSON snapshot of the row at queue time
+  payload TEXT NOT NULL,
   created_at TEXT DEFAULT (datetime('now')),
   attempts INTEGER DEFAULT 0,
   last_error TEXT

@@ -29,7 +29,9 @@ export async function getSchoolSettings(): Promise<SchoolSettings> {
 
 export async function updateSchoolSettings(input: Partial<SchoolSettings>) {
   const staff = await getEffectiveStaff();
-  if (!staff || staff.role !== "director") return { error: "Only the Director can change school settings." };
+  if (!staff || !["director", "super_admin"].includes(staff.role)) {
+    return { error: "Only the Director or Super Administrator can change school settings." };
+  }
 
   const now = nowIso();
 
@@ -43,6 +45,7 @@ export async function updateSchoolSettings(input: Partial<SchoolSettings>) {
     });
 
     revalidatePath("/dashboard/director/settings");
+    revalidatePath("/dashboard/super-admin");
     return { success: true };
   }
 
@@ -51,5 +54,6 @@ export async function updateSchoolSettings(input: Partial<SchoolSettings>) {
   if (error) return { error: "Could not save settings." };
 
   revalidatePath("/dashboard/director/settings");
+  revalidatePath("/dashboard/super-admin");
   return { success: true };
 }

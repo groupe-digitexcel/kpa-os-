@@ -56,7 +56,9 @@ export async function createClass(input: {
   teacherId?: string;
 }) {
   const staff = await getEffectiveStaff();
-  if (!staff || staff.role !== "director") return { error: "Only the Director can create classes." };
+  if (!staff || (staff.role !== "director" && staff.role !== "super_admin")) {
+    return { error: "Only the Director or Super Administrator can create classes." };
+  }
 
   if (isLocalMode()) {
     const db = getLocalDb();

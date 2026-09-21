@@ -1,12 +1,14 @@
+import "server-only";
 import Database from "better-sqlite3";
 import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs";
 import os from "os";
 
-// Where the local database file lives on the staff computer.
-// Tauri sets LOCAL_DB_DIR to its app-data directory; falls back to a local
-// folder for `npm run dev` testing without Tauri.
+// IMPORTANT: this module is desktop/local-runtime only. It must never be
+// imported by browser code. `server-only` makes accidental client imports a
+// build-time error.
+
 function getDbPath() {
   const dir =
     process.env.LOCAL_DB_DIR ??
@@ -21,7 +23,7 @@ export function getLocalDb() {
   if (dbInstance) return dbInstance;
 
   const db = new Database(getDbPath());
-  db.pragma("journal_mode = WAL"); // safer against power loss / crashes mid-write
+  db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
 
   const schemaPath = path.join(process.cwd(), "lib", "db", "local-schema.sql");
@@ -34,9 +36,6 @@ export function getLocalDb() {
   return db;
 }
 
-// ALTER TABLE ADD COLUMN isn't idempotent in SQLite (errors if the column
-// already exists), so new columns added to existing tables after the initial
-// release go here instead of local-schema.sql, guarded by a table_info check.
 function runMigrations(db: Database.Database) {
   const addColumnIfMissing = (table: string, column: string, definition: string) => {
     const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
@@ -51,7 +50,61 @@ function runMigrations(db: Database.Database) {
   addColumnIfMissing("parents", "access_code", "TEXT");
   addColumnIfMissing("documents_generated", "grades_snapshot", "TEXT");
   addColumnIfMissing("staff", "pin_hash", "TEXT");
+
+  migrateStaffRoleConstraint(db);
+}
+
+/**
+ * SQLite does not support ALTER TABLE for CHECK constraints. Older KPA-OS
+ * desktop databases therefore need a one-time staff-table rebuild so a
+ * synced super_admin account can also authenticate and operate offline.
+ *
+ * Existing staff rows, including PIN hashes, are copied unchanged.
+ */
+function migrateStaffRoleConstraint(db: Database.Database) {
+  const row = db
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'staff'")
+    .get() as { sql: string | null } | undefined;
+
+  if (!row?.sql || row.sql.includes("'super_admin'")) return;
+
+  db.pragma("foreign_keys = OFF");
+  try {
+    const migrate = db.transaction(() => {
+      db.exec(`
+        CREATE TABLE staff_new (
+          id TEXT PRIMARY KEY,
+          auth_user_id TEXT UNIQUE,
+          full_name TEXT NOT NULL,
+          role TEXT NOT NULL CHECK (role IN ('super_admin','director','accountant','secretary','teacher','auditor')),
+          phone TEXT,
+          email TEXT,
+          active INTEGER DEFAULT 1,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          deleted INTEGER DEFAULT 0,
+          pin_hash TEXT
+        );
+
+        INSERT INTO staff_new
+          (id, auth_user_id, full_name, role, phone, email, active, created_at,
+           updated_at, synced_at, deleted, pin_hash)
+        SELECT
+          id, auth_user_id, full_name, role, phone, email, active, created_at,
+          updated_at, synced_at, deleted, pin_hash
+        FROM staff;
+
+        DROP TABLE staff;
+        ALTER TABLE staff_new RENAME TO staff;
+      `);
+    });
+
+    migrate();
+  } finally {
+    db.pragma("foreign_keys = ON");
   }
+}
 
 export function newId() {
   return randomUUID();
@@ -61,9 +114,6 @@ export function nowIso() {
   return new Date().toISOString();
 }
 
-// Every write that should eventually reach Supabase goes through here: writes
-// the row locally AND drops a row in sync_queue in the same transaction, so a
-// crash between the two can never happen (either both commit or neither does).
 export function writeWithSync(
   tableName: string,
   recordId: string,
